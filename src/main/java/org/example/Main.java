@@ -8,8 +8,11 @@ import kotlinx.coroutines.future.FutureKt;
 import kotlinx.serialization.json.Json;
 import kotlinx.serialization.json.JsonKt;
 import org.ton.api.liteclient.config.LiteClientConfigGlobal;
-import org.ton.lite.client.AccountState;
+import org.ton.block.Account;
+import org.ton.block.AccountInfo;
+import org.ton.block.AddrStd;
 import org.ton.lite.client.LiteClient;
+import org.ton.lite.client.internal.FullAccountState;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -23,7 +26,7 @@ public class Main {
     public static void main(String[] args) {
 
         Json json = JsonKt.Json(Json.Default, (builder) -> {
-           builder.setIgnoreUnknownKeys(true);
+            builder.setIgnoreUnknownKeys(true);
             return Unit.INSTANCE;
         });
 
@@ -34,13 +37,17 @@ public class Main {
 
         CoroutineContext context = (CoroutineContext) Dispatchers.getDefault();
         try (LiteClient liteClient = new LiteClient(context, liteClientConfigGlobal)) {
-            String address = "123456789";
+            String address = "EQDhfNEHdK06MNRjGyx5h0Pao5NgqFTE8ug2SrZ14c6bJnJF";
+            AddrStd addrStd = AddrStd.parse(address);
 
-            Future<AccountState> future = callSuspend((c) -> liteClient.getAccount(address, c));
-            AccountState accountState = future.get();
-            String balance = accountState.getInfo().getStorage().getBalance().getCoins().toString();
-            System.out.println(balance);
+            Future<FullAccountState> future = callSuspend((c) -> liteClient.getAccountState(addrStd, c));
+            FullAccountState fullAccountState = future.get();
+            Account account = fullAccountState.account().getValue();
 
+            if (account instanceof AccountInfo) {
+                String balance = ((AccountInfo) account).storage().balance().coins().toString();
+                System.out.println(balance);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
